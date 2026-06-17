@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Snake Flashcards - High Quality Edition</title>
+  <style>
+    :root {
+      --forest-deep: #1a3c2a; --forest-mid: #2d5a3d; --forest-light: #4a7c59;
+      --earth-brown: #6b4c3b; --sand-warm: #d4b896; --sky-soft: #87a878;
+      --text-dark: #2c2c2c; --text-light: #f8f8f6; --accent-gold: #c9a227;
+      --danger-red: #b83a3a; --success-green: #3d8b5a; --card-bg: #ffffff;
+      --shadow: 0 12px 40px rgba(26, 60, 42, 0.35);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: "Segoe UI", system-ui, sans-serif;
+      background: linear-gradient(180deg, var(--sky-soft) 0%, var(--forest-mid) 45%, var(--forest-deep) 100%);
+      min-height: 100vh; display: flex; flex-direction: column;
+      align-items: center; color: var(--text-dark); padding: 1.25rem 1rem 2rem;
+    }
+    header { text-align: center; margin-bottom: 1rem; color: var(--text-light); }
+    header h1 { font-size: 1.85rem; font-weight: 700; text-shadow: 0 2px 4px rgba(0,0,0,0.3); }
+    header p  { font-size: 0.95rem; opacity: 0.9; margin-top: 0.35rem; }
+    #hud {
+      background: rgba(255,255,255,0.15); backdrop-filter: blur(6px);
+      border: 1px solid rgba(255,255,255,0.25); border-radius: 999px;
+      padding: 0.5rem 1.25rem; color: var(--text-light);
+      font-weight: 600; font-size: 0.95rem; margin-bottom: 1rem;
+    }
+    #app { width: 100%; max-width: 520px; }
+    .panel {
+      background: var(--card-bg); border-radius: 16px; box-shadow: var(--shadow);
+      border: 3px solid var(--earth-brown); padding: 1.75rem;
+      text-align: center; animation: slideUp 0.35s ease;
+    }
+    .panel.hidden { display: none; }
+    @keyframes slideUp { from { transform: translateY(16px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    .panel h2        { color: var(--forest-deep); font-size: 1.4rem; margin-bottom: 0.5rem; }
+    .panel .subtitle { color: var(--earth-brown); font-size: 0.9rem; margin-bottom: 1.25rem; }
+    .panel p         { line-height: 1.55; color: #555; margin-bottom: 1rem; }
+
+    .snake-image {
+      position: relative; width: 100%;
+      border-radius: 12px; margin-bottom: 1.25rem;
+      border: 2px solid var(--earth-brown);
+      background: linear-gradient(135deg, var(--sand-warm), var(--forest-light));
+      overflow: hidden;
+      display: flex; align-items: center; justify-content: center;
+      min-height: 280px;
+    }
+    .snake-image .photo { width: 100%; height: auto; display: block; object-fit: contain; max-height: 400px; }
+    .snake-image .emoji { font-size: 4rem; line-height: 1; padding: 2rem 0; }
+    .snake-image .hidden { display: none; }
+    .img-loading {
+      width: 100%; height: 280px;
+      background: linear-gradient(90deg, #e0d5c5 25%, #f0e8d8 50%, #e0d5c5 75%);
+      background-size: 200% 100%; animation: shimmer 1.2s infinite; border-radius: 10px;
+    }
+    @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+
+    .snake-name    { font-size: 1.35rem; font-weight: 700; color: var(--forest-deep); margin-bottom: 0.75rem; }
+    .question-text { font-size: 1.1rem; font-weight: 600; margin-bottom: 1.25rem; }
+
+    button {
+      cursor: pointer; border: none; border-radius: 10px;
+      padding: 0.85rem 1.5rem; font-size: 1rem; font-weight: 600;
+      transition: transform 0.15s ease, box-shadow 0.15s ease; min-width: 140px;
+    }
+    button:hover   { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
+    button:active  { transform: translateY(0); }
+    button:disabled{ opacity: 0.55; cursor: not-allowed; transform: none; box-shadow: none; }
+    .btn-group { display: flex; gap: 0.75rem; flex-wrap: wrap; justify-content: center; }
+    .btn-primary      { background: var(--forest-mid);    color: var(--text-light); }
+    .btn-gold         { background: var(--accent-gold);   color: var(--text-dark); }
+    .btn-venomous     { background: var(--danger-red);    color: var(--text-light); }
+    .btn-non-venomous { background: var(--success-green); color: var(--text-light); }
+    .btn-reveal       { background: var(--earth-brown);   color: var(--text-light); margin-top: 0.5rem; }
+    .btn-next         { background: var(--forest-mid);    color: var(--text-light); margin-top: 1.25rem; }
+
+    .correct-banner {
+      display: flex; align-items: center; justify-content: center; gap: 0.5rem;
+      background: #d4edda; border: 2px solid var(--success-green);
+      border-radius: 10px; padding: 0.75rem 1rem;
+      color: #1a5c2a; font-size: 1rem; font-weight: 700;
+      margin-bottom: 1rem;
+    }
+    .correct-banner.hidden { display: none; }
+
+    .result-banner { font-size: 1.25rem; font-weight: 700; margin-bottom: 0.75rem; }
+    .result-banner.correct { color: var(--success-green); }
+    .result-banner.wrong   { color: var(--danger-red); }
+    .truth-hint { font-size: 0.95rem; color: var(--earth-brown); margin-bottom: 1rem; }
+
+    .info-list { list-style: none; text-align: left; margin-top: 0.75rem; }
+    .info-list li {
+      padding: 0.6rem; font-size: 0.9rem; line-height: 1.5;
+      border-bottom: 1px solid rgba(0,0,0,0.06);
+      display: grid; grid-template-columns: 130px 1fr; gap: 0.5rem;
+    }
+    .info-list li .fact-label { font-weight: 700; color: var(--forest-deep); white-space: nowrap; }
+    .info-list li .fact-value { color: #444; }
+
+    .section-hidden { display: none; }
+    .size-picker { display: flex; gap: 0.6rem; flex-wrap: wrap; justify-content: center; margin-bottom: 1.25rem; }
+    .size-btn {
+      background: var(--forest-light); color: var(--text-light);
+      border-radius: 8px; padding: 0.5rem 1rem; font-size: 0.9rem;
+      min-width: auto; font-weight: 700;
+    }
+    .size-btn.active { background: var(--forest-deep); outline: 3px solid var(--accent-gold); }
+    .photo-credit { font-size: 0.7rem; color: #888; text-align: right; margin-top: -0.75rem; margin-bottom: 0.75rem; }
+    .photo-credit a { color: #888; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>🐍 Snake Flashcards</h1>
+  <p>Learn to identify snakes with vetted, high-quality textbook photos.</p>
+</header>
+
+<div id="hud">Card 0 / ?</div>
+
+<main id="app">
+
+  <section id="panel-welcome" class="panel">
+    <h2>Welcome, Explorer!</h2>
+    <p class="subtitle">Although there are more than 3,000 kinds of snakes in the world, only about 600 species are venomous, and just 200–250 are responsible for most snakebite deaths and injuries worldwide</p>
+    <p>Through this game, you will be able to identify whether a snake is venomous or not from a given photo. By learning its patterns, shape, and features, you can help protect these “reptile friends” from being killed due to misunderstandings</p>
+    <p style="font-weight:600; color:var(--forest-deep); margin-bottom:0.5rem">Select Quiz Length:</p>
+    <div class="size-picker" id="size-picker">
+      <button class="size-btn" data-n="5">5</button>
+      <button class="size-btn active" data-n="10">10</button>
+      <button class="size-btn" data-n="15">15</button>
+    </div>
+    <button class="btn-primary" id="btn-start">Start Learning</button>
+  </section>
+
+  <section id="panel-flashcard" class="panel hidden">
+    <div class="snake-image">
+      <div class="img-loading" id="img-skeleton"></div>
+      <img class="photo hidden" id="snake-photo" alt="" />
+      <span class="emoji hidden" id="snake-emoji">🐍</span>
+    </div>
+    <p class="photo-credit" id="photo-credit"></p>
+
+    <p class="snake-name section-hidden" id="snake-name"></p>
+
+    <div id="phase-question">
+      <p class="question-text">Is this snake Venomous or Non-Venomous?</p>
+      <div class="btn-group">
+        <button class="btn-venomous"     id="btn-venomous">Venomous</button>
+        <button class="btn-non-venomous" id="btn-non-venomous">Non-Venomous</button>
+      </div>
+    </div>
+
+    <div id="phase-result" class="section-hidden">
+      <p class="result-banner" id="result-banner"></p>
+      <p class="truth-hint section-hidden" id="truth-hint"></p>
+      <button class="btn-reveal section-hidden" id="btn-reveal">Reveal the Facts</button>
+    </div>
+
+    <div id="phase-facts" class="section-hidden">
+      <div class="correct-banner hidden" id="correct-banner">
+        <span>✅</span><span> You got it right!</span>
+      </div>
+      <ul class="info-list" id="info-list"></ul>
+      <button class="btn-next" id="btn-next">Next Card</button>
+    </div>
+  </section>
+
+  <section id="panel-complete" class="panel hidden">
+    <h2>🏆 Session Complete!</h2>
+    <p id="score-summary" style="margin-bottom:0.75rem"></p>
+    <p>Consistent training improves wildlife safety awareness. Keep practicing to become an expert!</p>
+    <p>But remember, no matter what kind of snake friend you encounter, always seek help from experts to keep yourself safe and protect these adorable snakes as well!</p>
+    <button class="btn-gold" id="btn-restart" style="margin-top:1rem">Try Another Round</button>
+  </section>
+
+</main>
+
+<script>
+const ALL_SNAKES = [
+  { name:"Indian Rat Snake",   sciName: "Ptyas mucosa",               isVenomous:false },
+  { name:"Gopher Snake",       sciName: "Pituophis catenifer",        isVenomous:false },
+  { name:"Milk Snake",         sciName: "Lampropeltis triangulum",    isVenomous:false },
+  { name:"Corn Snake",         sciName: "Pantherophis guttatus",      isVenomous:false },
+  { name:"Ball Python",        sciName: "Python regius",              isVenomous:false },
+  { name:"Burmese Python",     sciName: "Python bivittatus",          isVenomous:false },
+  { name:"Green Tree Python",  sciName: "Morelia viridis",            isVenomous:false },
+  { name:"Black Racer Snake",  sciName: "Coluber constrictor",        isVenomous:false },
+  { name:"King Cobra",         sciName: "Ophiophagus hannah",         isVenomous:true  },
+  { name:"Black Mamba",        sciName: "Dendroaspis polylepis",      isVenomous:true  },
+  { name:"Inland Taipan",      sciName: "Oxyuranus microlepidotus",   isVenomous:true  },
+  { name:"Coral Snake",        sciName: "Micrurus fulvius",           isVenomous:true  },
+  { name:"Copperhead Snake",   sciName: "Agkistrodon contortrix",     isVenomous:true  },
+  { name:"Gaboon Viper",       sciName: "Bitis gabonica",             isVenomous:true  },
+  { name:"Puff Adder",         sciName: "Bitis arietans",             isVenomous:true  }
+];
+
+const FACTS_DB = {
+  "Indian Rat Snake":      { habitat:"South & Southeast Asia forests, urban outskirts.", diet:" преимущественно rats, mice, frogs, and birds.", size:"150-250 cm (5-8 ft).", behavior:"Very fast, active during day; inflates neck when cornered.", fact:"Frequently found near human homes hunting crop pests. Entirely harmless." },
+  "Gopher Snake":          { habitat:"North American deserts, fields, and open woodlands.", diet:"Mice, pocket gophers, birds, and eggs.", size:"120-210 cm (4-7 ft).", behavior:"Flattens head and loud-hisses defensively.", fact:"Master of mimicry; it shakes its tail in dry leaves to sound exactly like a rattlesnake." },
+  "Milk Snake":            { habitat:"Forest floors and rocky hillsides of North America.", diet:"Small rodents, lizards, and other snakes.", size:"60-120 cm (2-4 ft).", behavior:"Nocturnal, quiet, prefers hiding under logs.", fact:"Uses Batesian mimicry; its colored bands resemble the highly venomous Coral snake to scare predators." },
+  "Corn Snake":            { habitat:"Southeastern US pine forests and crop fields.", diet:"Mice, rats, and small nesting birds.", size:"90-150 cm (3-5 ft).", behavior:"Docile, excellent climber, often active at dusk.", fact:"Incredibly popular pet due to its calm nature and vibrant orange/red patterns." },
+  "Ball Python":           { habitat:"West and Central African dry grasslands and open forests.", diet:"Small terrestrial rodents and birds.", size:"90-150 cm (3-5 ft).", behavior:"Reclusive; rolls into a tight ball with head hidden inside when scared.", fact:"Extremely gentle nature. Can live up to 30 years or more under proper human care." },
+  "Burmese Python":        { habitat:"Marshes and tropical jungles of South/Southeast Asia.", diet:"Large mammals, deer, birds, and reptiles.", size:"300-550 cm (10-18 ft).", behavior:"Slow moving, highly aquatic, apex constrictor.", fact:"Introduced into Florida's Everglades ecosystem, where it is now a major invasive threat." },
+  "Green Tree Python":     { habitat:"Rainforest canopies of New Guinea, Indonesia, and northern Australia.", diet:"Arboreal rodents, bats, and small birds.", size:"120-180 cm (4-6 ft).", behavior:"Stays coiled over tree branches all day, hunts actively at night.", fact:"Hatchlings emerge bright lemon-yellow or maroon-red, transforming into emerald green over a year." },
+  "Black Racer Snake":     { habitat:"Fields, open woods, and suburban gardens across North America.", diet:"Frogs, lizards, rodents, and smaller snakes.", size:"90-150 cm (3-5 ft).", behavior:"Highly alert, lightning-fast runner, flees immediately if approached.", fact:"Non-venomous but extremely defensive; it will strike repeatedly if pinned down." },
+  "King Cobra":            { habitat:"Dense tropical jungles and plains of India and Southeast Asia.", diet:"Exclusively other snakes, including venomous ones.", size:"300-400 cm (10-13 ft).", behavior:"Can rear up 1/3 of its body length to stare a human in the eye.", fact:"The longest venomous snake on Earth. Possesses massive venom volume capable of bringing down an elephant." },
+  "Black Mamba":           { habitat:"Rocky hillsides and wooded savannas of sub-Saharan Africa.", diet:"Hyraxes, bushbabies, rats, and small birds.", size:"200-300 cm (6-10 ft).", behavior:"Shy but highly volatile. Moves at speeds up to 11 km/h.", fact:"The inside of its mouth is ink-black, which it displays as a terrifying final warning before striking." },
+  "Inland Taipan":         { habitat:"Deep cracked clay soils of semi-arid central Australian outback.", diet:"Native long-haired rats and small mammals.", size:"180 cm (6 ft).", behavior:"Extremely reclusive, gentle, avoids human conflict at all costs.", fact:"Holds the title for the most toxic venom of any land snake. One bite can dispatch 100 adult men." },
+  "Coral Snake":           { habitat:"Pine woods and sandy scrublands of the southern United States.", diet:"Lizards, frogs, and other small burrowing snakes.", size:"50-100 cm (1.6-3.3 ft).", behavior:"Secretive burrower, spends most time under leaf litter.", fact:"Possesses potent neurotoxic venom. Remember the rule: 'Red touches yellow, kills a fellow'." },
+  "Copperhead Snake":      { habitat:"Deciduous forests, rocky ledges, and woodpiles in eastern US.", diet:"Mice, large insects, frogs, and cicadas.", size:"60-90 cm (2-3 ft).", behavior:"Relies entirely on camouflage; freezes completely flat when approached.", fact:"Its hourglass-shaped body patterns look identical to dead autumn leaves, making them hard to spot." },
+  "Gaboon Viper":          { habitat:"Rainforest floors of Equatorial Africa.", diet:"Ground birds, rodents, and rabbits.", size:"120-200 cm (4-6.5 ft).", behavior:"Extremely placid ambush predator; rarely strikes unless stepped on.", fact:"Possesses the longest fangs (up to 5 cm / 2 inches) and the heaviest body of any venomous snake in Africa." },
+  "Puff Adder":            { habitat:"Semi-arid bushlands, grasslands, and savannas across Africa.", diet:"Rats, mice, and ground nesting birds.", size:"90-120 cm (3-4 ft).", behavior:"Sluggish but packs a blindingly fast strike speed when provoked.", fact:"Responsible for more human snakebite fatalities in Africa than any other species due to its wide range." }
+};
+
+async function SnakeData(sciName) {
+  try {
+    const url = `https://api.inaturalist.org/v1/taxa?q=${encodeURIComponent(sciName)}&rank=species&per_page=1`;
+    const res  = await fetch(url);
+    const data = await res.json();
+    
+    if (!data.results || data.results.length === 0) return null;
+    const taxon = data.results[0];
+    if (taxon.taxon_photos && taxon.taxon_photos.length > 0) {
+      const randomPhotoIdx = Math.floor(Math.random() * taxon.taxon_photos.length);
+      const pick = taxon.taxon_photos[randomPhotoIdx].photo;
+      
+      const imageUrl = (pick.url || '').replace('square', 'large').replace('medium', 'large');
+      const photoAttribution = pick.attribution || '';
+      return { imageUrl, photoAttribution };
+    } else if (taxon.default_photo) {
+      const imageUrl = (taxon.default_photo.medium_url || '').replace('square', 'large');
+      const photoAttribution = taxon.default_photo.attribution || '';
+      return { imageUrl, photoAttribution };
+    }
+    return null;
+  } catch (e) {
+    console.warn('iNaturalist fetch failed for', sciName, e);
+    return null;
+  }
+}
+
+/* ── App Architecture ── */
+let sessionSize = 10, deck = [], currentIndex = 0, correctCount = 0, currentSnake = null;
+const PHASE = { QUESTION:'question', RESULT:'result', FACTS:'facts' };
+
+const hudEl          = document.getElementById('hud');
+const panelWelcome   = document.getElementById('panel-welcome');
+const panelFlashcard = document.getElementById('panel-flashcard');
+const panelComplete  = document.getElementById('panel-complete');
+const snakePhoto     = document.getElementById('snake-photo');
+const snakeEmoji     = document.getElementById('snake-emoji');
+const imgSkeleton    = document.getElementById('img-skeleton');
+const photoCredit    = document.getElementById('photo-credit');
+const snakeNameEl    = document.getElementById('snake-name');
+const phaseQuestion  = document.getElementById('phase-question');
+const phaseResult    = document.getElementById('phase-result');
+const phaseFacts     = document.getElementById('phase-facts');
+const resultBanner   = document.getElementById('result-banner');
+const correctBanner  = document.getElementById('correct-banner');
+const truthHint      = document.getElementById('truth-hint');
+const btnReveal      = document.getElementById('btn-reveal');
+const infoList       = document.getElementById('info-list');
+
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length-1; i > 0; i--) { const j = Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; }
+  return a;
+}
+
+function updateHUD() { hudEl.textContent = `Card ${Math.min(currentIndex+1, sessionSize)} / ${sessionSize}`; }
+function showPanel(p) { [panelWelcome,panelFlashcard,panelComplete].forEach(x=>x.classList.add('hidden')); p.classList.remove('hidden'); }
+function setPhase(phase) {
+  phaseQuestion.classList.toggle('section-hidden', phase !== PHASE.QUESTION);
+  phaseResult.classList.toggle('section-hidden',   phase !== PHASE.RESULT);
+  phaseFacts.classList.toggle('section-hidden',    phase !== PHASE.FACTS);
+}
+
+function resetCardUI() {
+  snakeNameEl.classList.add('section-hidden');
+  truthHint.classList.add('section-hidden');
+  btnReveal.classList.add('section-hidden');
+  correctBanner.classList.add('hidden');
+  resultBanner.className = 'result-banner';
+  resultBanner.textContent = '';
+  infoList.innerHTML = '';
+  photoCredit.innerHTML = '';
+  imgSkeleton.style.display = 'block';
+  snakePhoto.classList.add('hidden');
+  snakeEmoji.classList.add('hidden');
+}
+
+async function loadCard(index) {
+  currentSnake = deck[index];
+  resetCardUI();
+  
+  snakeNameEl.textContent = currentSnake.name;
+  [phaseQuestion, phaseResult, phaseFacts].forEach(p => p.classList.add('section-hidden'));
+
+  const result = await SnakeData(currentSnake.sciName);
+  imgSkeleton.style.display = 'none';
+
+  if (result && result.imageUrl) {
+    snakePhoto.src = result.imageUrl;
+    snakePhoto.alt = currentSnake.name;
+    snakePhoto.classList.remove('hidden');
+    if (result.photoAttribution) {
+      photoCredit.innerHTML = `📷 ${result.photoAttribution} via <a href="https://www.inaturalist.org" target="_blank">iNaturalist</a>`;
+    }
+  } else {
+    snakeEmoji.textContent = '🐍';
+    snakeEmoji.classList.remove('hidden');
+  }
+
+  setPhase(PHASE.QUESTION);
+}
+
+function showFacts() {
+  snakeNameEl.classList.remove('section-hidden');
+  infoList.innerHTML = '';
+  const f = FACTS_DB[currentSnake.name];
+  const rows = [
+    { label: 'Native Habitat:', value: f.habitat },
+    { label: 'Primary Diet:',   value: f.diet },
+    { label: 'Average Size:',   value: f.size },
+    { label: 'Typical Behavior:', value: f.behavior },
+    { label: 'Key Fact:',       value: f.fact },
+  ];
+  rows.forEach(row => {
+    const li = document.createElement('li');
+    li.innerHTML = `<span class="fact-label">${row.label}</span><span class="fact-value">${row.value}</span>`;
+    infoList.appendChild(li);
+  });
+  setPhase(PHASE.FACTS);
+}
+
+function handleAnswer(playerSaidVenomous) {
+  const ok = playerSaidVenomous === currentSnake.isVenomous;
+  if (ok) {
+    correctCount++;
+    setPhase(PHASE.FACTS); 
+    correctBanner.classList.remove('hidden');
+    showFacts();
+  } else {
+    setPhase(PHASE.RESULT);
+    correctBanner.classList.add('hidden');
+    resultBanner.textContent = 'Oops! Try again';
+    resultBanner.classList.add('wrong');
+    truthHint.textContent = `This species is actually ${currentSnake.isVenomous ? 'Venomous ⚠️' : 'Non-Venomous ✅'}.`;
+    truthHint.classList.remove('section-hidden');
+    btnReveal.classList.remove('section-hidden');
+  }
+}
+
+function startSession() {
+  deck = shuffle(ALL_SNAKES).slice(0, sessionSize);
+  currentIndex = 0; correctCount = 0;
+  updateHUD(); showPanel(panelFlashcard); loadCard(0);
+}
+
+document.getElementById('size-picker').addEventListener('click', e => {
+  if (!e.target.dataset.n) return;
+  document.querySelectorAll('.size-btn').forEach(b => b.classList.remove('active'));
+  e.target.classList.add('active');
+  sessionSize = parseInt(e.target.dataset.n);
+});
+document.getElementById('btn-start').addEventListener('click', startSession);
+document.getElementById('btn-venomous').addEventListener('click', () => handleAnswer(true));
+document.getElementById('btn-non-venomous').addEventListener('click', () => handleAnswer(false));
+document.getElementById('btn-reveal').addEventListener('click', () => {
+  btnReveal.classList.add('section-hidden');
+  truthHint.classList.add('section-hidden');
+  showFacts();
+});
+document.getElementById('btn-next').addEventListener('click', () => {
+  currentIndex++;
+  if (currentIndex >= sessionSize) {
+    document.getElementById('score-summary').textContent =
+      `You successfully identified ${correctCount} out of ${sessionSize} snakes on the first try.`;
+    showPanel(panelComplete);
+  } else { updateHUD(); loadCard(currentIndex); }
+});
+document.getElementById('btn-restart').addEventListener('click', () => showPanel(panelWelcome));
+</script>
+</body>
+</html>
