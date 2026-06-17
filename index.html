@@ -380,7 +380,7 @@ document.getElementById('btn-next').addEventListener('click', () => {
   currentIndex++;
   if (currentIndex >= sessionSize) {
     document.getElementById('score-summary').textContent =
-      `You successfully identified ${correctCount} out of ${sessionSize} snakes on the first try.`;
+      `You successfully identified ${correctCount} out of ${sessionSize} snakes!`;
     showPanel(panelComplete);
   } else { updateHUD(); loadCard(currentIndex); }
 });
