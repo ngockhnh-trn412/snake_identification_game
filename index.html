@@ -3,7 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Snake Flashcards - High Quality Edition</title>
+  <title>Snake Flashcards</title>
+  <link rel="icon" type="image/png" href="logo.jpg">
   <style>
     :root {
       --forest-deep: #1a3c2a; --forest-mid: #2d5a3d; --forest-light: #4a7c59;
@@ -380,7 +381,7 @@ document.getElementById('btn-next').addEventListener('click', () => {
   currentIndex++;
   if (currentIndex >= sessionSize) {
     document.getElementById('score-summary').textContent =
-      `You successfully identified ${correctCount} out of ${sessionSize} snakes!`;
+      `You successfully identified ${correctCount} out of ${sessionSize} snakes.`;
     showPanel(panelComplete);
   } else { updateHUD(); loadCard(currentIndex); }
 });
